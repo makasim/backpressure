@@ -9,7 +9,7 @@ import (
 )
 
 func TestNoCongestion(t *testing.T) {
-	bp, err := backpressure.New(backpressure.AIMDConfig{
+	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
 		DecideInterval:   time.Millisecond * 5,
 		ThresholdPercent: 0.01,
 		IncreasePercent:  1.01,
