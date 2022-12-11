@@ -16,7 +16,6 @@ func TestNoCongestion(t *testing.T) {
 		DecreasePercent:  0.8,
 	})
 	require.NoError(t, err)
-	defer bp.Close()
 
 	var totalAllowed int
 	var totalForbidden int
