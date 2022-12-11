@@ -56,6 +56,7 @@ type AIMD struct {
 
 	max        int64
 	used       int64
+	usedMax    int64
 	denied     int64
 	successful int64
 	congested  int64
@@ -99,6 +100,18 @@ func (bp *AIMD) Acquire() (Token, bool) {
 		atomic.AddInt64(&bp.used, -1)
 		atomic.AddInt64(&bp.denied, 1)
 		return Token{}, false
+	}
+
+loop:
+	for {
+		usedMax := atomic.LoadInt64(&bp.usedMax)
+		if used <= usedMax {
+			break loop
+		}
+
+		if atomic.CompareAndSwapInt64(&bp.usedMax, usedMax, used) {
+			break loop
+		}
 	}
 
 	return Token{
@@ -173,6 +186,8 @@ func (bp *AIMD) decideLoop() {
 			}
 			bp.muxStats.Unlock()
 
+			atomic.StoreInt64(&bp.usedMax, 0)
+
 			bp.h.Reset()
 		case <-bp.closeCh:
 			bp.dt.Stop()
@@ -196,6 +211,11 @@ func (bp *AIMD) incr(max int64) {
 }
 
 func (bp *AIMD) decr(max int64) {
+	usedMax := atomic.LoadInt64(&bp.usedMax)
+	if max > usedMax {
+		max = usedMax
+	}
+
 	max = int64(math.Ceil(float64(max) * bp.cfg.DecreasePercent))
 	if max < bp.cfg.MinMax {
 		max = bp.cfg.MinMax
