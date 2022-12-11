@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	backpressure "github.com/makasim/go-backpresure"
+	"github.com/makasim/backpresure"
 	"github.com/stretchr/testify/require"
 )
 

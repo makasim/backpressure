@@ -1,4 +1,4 @@
-module github.com/makasim/go-backpresure
+module github.com/makasim/backpresure
 
 go 1.19
 
