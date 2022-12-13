@@ -20,8 +20,10 @@ type AIMDConfig struct {
 	MaxMax int64
 	MinMax int64
 
-	Latency           time.Duration
-	LatencyPercentile float64
+	SameLatency               time.Duration
+	SameLatencyPercentile     float64
+	DecreaseLatency           time.Duration
+	DecreaseLatencyPercentile float64
 }
 
 type AIMDStats struct {
@@ -149,15 +151,18 @@ func (bp *AIMD) decide() {
 
 	congestedPercent := float64(successful+congested) / 100 * float64(congested)
 
+	highCongestion := congestedPercent >= bp.cfg.ThresholdPercent
+	highLatency := bp.h.ValueAtPercentile(bp.cfg.DecreaseLatencyPercentile) > bp.cfg.DecreaseLatency.Nanoseconds()
+	
+	moderateCongestion := congestedPercent > 0 && congestedPercent < bp.cfg.ThresholdPercent
+	moderateLatency := bp.cfg.SameLatency > 0 && bp.h.ValueAtPercentile(bp.cfg.SameLatencyPercentile) > bp.cfg.SameLatency.Nanoseconds()
+
 	var incr, decr, same int64
 	switch {
-	case bp.cfg.Latency > 0 && bp.h.ValueAtPercentile(bp.cfg.LatencyPercentile) > bp.cfg.Latency.Nanoseconds():
+	case highCongestion || highLatency:
 		bp.decr(max)
 		decr++
-	case congestedPercent >= bp.cfg.ThresholdPercent:
-		bp.decr(max)
-		decr++
-	case congestedPercent < bp.cfg.ThresholdPercent && congestedPercent > 0:
+	case moderateCongestion || moderateLatency:
 		same++
 		// keep current max
 	default:
