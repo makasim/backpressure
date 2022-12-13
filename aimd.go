@@ -1,6 +1,7 @@
 package backpressure
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"sync"
@@ -44,7 +45,7 @@ func DefaultAIMDConfig() AIMDConfig {
 	return AIMDConfig{
 		DecideInterval:   time.Second * 5,
 		ThresholdPercent: 0.01,
-		IncreasePercent:  1.02,
+		IncreasePercent:  0.02,
 		DecreasePercent:  0.8,
 		MaxMax:           math.MaxInt,
 		MinMax:           1,
@@ -69,8 +70,30 @@ type AIMD struct {
 }
 
 func NewAIMD(cfg AIMDConfig) (*AIMD, error) {
+	if err := validatePercent(cfg.DecreasePercent); err != nil {
+		return nil, fmt.Errorf("decretase percent: %s", err)
+	}
+	if err := validatePercent(cfg.IncreasePercent); err != nil {
+		return nil, fmt.Errorf("increase percent: %s", err)
+	}
+	if err := validatePercent(cfg.ThresholdPercent); err != nil {
+		return nil, fmt.Errorf("threashold percent: %s", err)
+	}
+	if err := validatePercent(cfg.DecreaseLatencyPercentile); err != nil {
+		return nil, fmt.Errorf("decrease latency percentile: %s", err)
+	}
+	if err := validatePercent(cfg.SameLatencyPercentile); err != nil {
+		return nil, fmt.Errorf("same latency percentile: %s", err)
+	}
+
+	if cfg.MinMax != 0 && cfg.MinMax >= cfg.MaxMax {
+		return nil, fmt.Errorf("min max greater than max max")
+	}
 
 	if cfg.MaxMax <= 0 {
+		cfg.MaxMax = math.MaxInt
+	}
+	if cfg.MinMax <= 0 {
 		cfg.MaxMax = math.MaxInt
 	}
 
@@ -152,10 +175,10 @@ func (bp *AIMD) decide() {
 	congestedPercent := float64(successful+congested) / 100 * float64(congested)
 
 	highCongestion := congestedPercent >= bp.cfg.ThresholdPercent
-	highLatency := bp.h.ValueAtPercentile(bp.cfg.DecreaseLatencyPercentile) > bp.cfg.DecreaseLatency.Nanoseconds()
-	
+	highLatency := bp.h.ValueAtPercentile(bp.cfg.DecreaseLatencyPercentile*100) > bp.cfg.DecreaseLatency.Nanoseconds()
+
 	moderateCongestion := congestedPercent > 0 && congestedPercent < bp.cfg.ThresholdPercent
-	moderateLatency := bp.cfg.SameLatency > 0 && bp.h.ValueAtPercentile(bp.cfg.SameLatencyPercentile) > bp.cfg.SameLatency.Nanoseconds()
+	moderateLatency := bp.cfg.SameLatency > 0 && bp.h.ValueAtPercentile(bp.cfg.SameLatencyPercentile*100) > bp.cfg.SameLatency.Nanoseconds()
 
 	var incr, decr, same int64
 	switch {
@@ -188,7 +211,7 @@ func (bp *AIMD) decide() {
 }
 
 func (bp *AIMD) incr(max int64) {
-	newMax := int64(math.Floor(float64(max)*bp.cfg.IncreasePercent) + 1)
+	newMax := int64(math.Floor(float64(max)*(1+bp.cfg.IncreasePercent)) + 1)
 	if newMax > bp.cfg.MaxMax {
 		newMax = bp.cfg.MaxMax
 	}
@@ -212,4 +235,15 @@ func (bp *AIMD) decr(max int64) {
 type Token struct {
 	Congested bool
 	start     int64
+}
+
+func validatePercent(p float64) error {
+	if p < 0 {
+		return fmt.Errorf("percent less than zero")
+	}
+	if p > 1 {
+		return fmt.Errorf("percent more than one")
+	}
+
+	return nil
 }
