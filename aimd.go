@@ -46,7 +46,7 @@ func DefaultAIMDConfig() AIMDConfig {
 		DecideInterval:   time.Second * 5,
 		ThresholdPercent: 0.01,
 		IncreasePercent:  0.02,
-		DecreasePercent:  0.8,
+		DecreasePercent:  0.2,
 		MaxMax:           math.MaxInt,
 		MinMax:           1,
 	}
@@ -225,7 +225,7 @@ func (bp *AIMD) decr(max int64) {
 		max = usedMax
 	}
 
-	max = int64(math.Ceil(float64(max) * bp.cfg.DecreasePercent))
+	max = int64(math.Ceil(float64(max) * (1 - bp.cfg.DecreasePercent)))
 	if max < bp.cfg.MinMax {
 		max = bp.cfg.MinMax
 	}
