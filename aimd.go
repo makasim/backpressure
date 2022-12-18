@@ -70,31 +70,8 @@ type AIMD struct {
 }
 
 func NewAIMD(cfg AIMDConfig) (*AIMD, error) {
-	if err := validatePercent(cfg.DecreasePercent); err != nil {
-		return nil, fmt.Errorf("decretase percent: %s", err)
-	}
-	if err := validatePercent(cfg.IncreasePercent); err != nil {
-		return nil, fmt.Errorf("increase percent: %s", err)
-	}
-	if err := validatePercent(cfg.ThresholdPercent); err != nil {
-		return nil, fmt.Errorf("threashold percent: %s", err)
-	}
-	if err := validatePercent(cfg.DecreaseLatencyPercentile); err != nil {
-		return nil, fmt.Errorf("decrease latency percentile: %s", err)
-	}
-	if err := validatePercent(cfg.SameLatencyPercentile); err != nil {
-		return nil, fmt.Errorf("same latency percentile: %s", err)
-	}
-
-	if cfg.MinMax != 0 && cfg.MinMax >= cfg.MaxMax {
-		return nil, fmt.Errorf("min max greater than max max")
-	}
-
-	if cfg.MaxMax <= 0 {
-		cfg.MaxMax = math.MaxInt
-	}
-	if cfg.MinMax <= 0 {
-		cfg.MaxMax = math.MaxInt
+	if err := validateAIMDConfig(cfg); err != nil {
+		return nil, err
 	}
 
 	bp := &AIMD{
@@ -237,12 +214,62 @@ type Token struct {
 	start     int64
 }
 
+func validateAIMDConfig(cfg AIMDConfig) error {
+	if cfg.DecideInterval == 0 {
+		return fmt.Errorf("DecideInterval: required")
+	}
+
+	if cfg.MinMax == 0 {
+		return fmt.Errorf("MinMax: required")
+	}
+	if cfg.MaxMax == 0 {
+		return fmt.Errorf("MaxMax: required")
+	}
+	if cfg.MinMax >= cfg.MaxMax {
+		return fmt.Errorf("MinMax: must be less than MaxMax")
+	}
+
+	if err := validatePercent(cfg.DecreasePercent); err != nil {
+		return fmt.Errorf("DecreasePercent: %s", err)
+	}
+	if cfg.DecreasePercent == 0 {
+		return fmt.Errorf("DecreasePercent: required")
+	}
+
+	if err := validatePercent(cfg.IncreasePercent); err != nil {
+		return fmt.Errorf("IncreasePercent: %s", err)
+	}
+	if cfg.DecreasePercent == 0 {
+		return fmt.Errorf("IncreasePercent: required")
+	}
+
+	if err := validatePercent(cfg.ThresholdPercent); err != nil {
+		return fmt.Errorf("ThresholdPercent: %s", err)
+	}
+
+	if err := validatePercent(cfg.DecreaseLatencyPercentile); err != nil {
+		return fmt.Errorf("DecreaseLatencyPercentile: %s", err)
+	}
+	if cfg.DecreaseLatencyPercentile != 0 && cfg.DecreaseLatency == 0 {
+		return fmt.Errorf("DecreaseLatency: required")
+	}
+
+	if err := validatePercent(cfg.SameLatencyPercentile); err != nil {
+		return fmt.Errorf("SameLatencyPercentile: %s", err)
+	}
+	if cfg.SameLatencyPercentile != 0 && cfg.SameLatency == 0 {
+		return fmt.Errorf("SameLatency: required")
+	}
+
+	return nil
+}
+
 func validatePercent(p float64) error {
 	if p < 0 {
-		return fmt.Errorf("percent less than zero")
+		return fmt.Errorf("less than zero")
 	}
 	if p > 1 {
-		return fmt.Errorf("percent more than one")
+		return fmt.Errorf("more than one")
 	}
 
 	return nil
