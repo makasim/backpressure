@@ -242,6 +242,28 @@ func TestDecide(main *testing.T) {
 		require.Equal(t, int64(80), bp.max)
 	})
 
+	main.Run("MaxMax", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.cfg.MaxMax = math.MaxInt64
+
+		bp.cfg.IncreasePercent = 0.2
+		bp.max = math.MaxInt64 - 1
+
+		bp.successful = 100
+		bp.decide()
+
+		bp.successful = 100
+		bp.decide()
+
+		bp.successful = 100
+		bp.decide()
+
+		bp.successful = 100
+		bp.decide()
+		require.Equal(t, int64(math.MaxInt64), bp.max)
+	})
+
 	main.Run("IncreaseSmall", func(t *testing.T) {
 		bp := setUp(t)
 
