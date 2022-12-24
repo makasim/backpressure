@@ -46,3 +46,19 @@ func main() {
 	wg.Done()
 }
 ```
+
+
+## Benchmark
+
+```shell
+$go test -run=XXX -v -bench=.
+goos: darwin
+goarch: arm64
+pkg: github.com/makasim/backpressure
+BenchmarkAIMD_OK
+BenchmarkAIMD_OK-10           	15986818	        66.95 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAIMD_Congested
+BenchmarkAIMD_Congested-10    	18400120	        65.22 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/makasim/backpressure	2.758s
+```
