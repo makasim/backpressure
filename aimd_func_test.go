@@ -26,7 +26,7 @@ func TestNoCongestion(t *testing.T) {
 	c := newClient(10)
 	p := newProxy(c.outCh, 50, bp)
 	o := newOrigin(func(idx, used int64, req req) {
-		time.Sleep(time.Microsecond * 950)
+		time.Sleep(time.Microsecond * 900)
 		req.resCh <- nil
 	}, 10, p.outCh)
 
