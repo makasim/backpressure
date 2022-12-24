@@ -12,7 +12,7 @@ func BenchmarkAIMD_OK(b *testing.B) {
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
 		DecideInterval:   time.Microsecond * 100,
 		ThresholdPercent: 0.01,
-		IncreasePercent:  1.01,
+		IncreasePercent:  0.01,
 		DecreasePercent:  0.8,
 	})
 	if err != nil {
@@ -33,7 +33,7 @@ func BenchmarkAIMD_Congested(b *testing.B) {
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
 		DecideInterval:   time.Microsecond * 100,
 		ThresholdPercent: 0.01,
-		IncreasePercent:  1.01,
+		IncreasePercent:  0.01,
 		DecreasePercent:  0.8,
 	})
 	if err != nil {

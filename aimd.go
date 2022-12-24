@@ -75,7 +75,7 @@ func NewAIMD(cfg AIMDConfig) (*AIMD, error) {
 		return nil, err
 	}
 
-	if cfg.MinMax == 0 {
+	if cfg.MinMax <= 0 {
 		cfg.MinMax = 1
 	}
 	if cfg.MaxMax == 0 {
