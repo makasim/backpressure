@@ -78,7 +78,7 @@ func NewAIMD(cfg AIMDConfig) (*AIMD, error) {
 		cfg.MinMax = 1
 	}
 	if cfg.MaxMax == 0 {
-		cfg.MaxMax = math.MaxInt
+		cfg.MaxMax = math.MaxInt64
 	}
 
 	bp := &AIMD{
@@ -156,9 +156,12 @@ func (bp *AIMD) decide() {
 	denied := atomic.SwapInt64(&bp.denied, 0)
 	max := atomic.LoadInt64(&bp.max)
 
-	congestedPercent := float64(successful+congested) / 100 * float64(congested)
+	if successful+congested == 0 {
+		return
+	}
 
-	highCongestion := congestedPercent >= bp.cfg.ThresholdPercent
+	congestedPercent := float64(congested) / float64(successful+congested)
+	highCongestion := congestedPercent != 0 && congestedPercent >= bp.cfg.ThresholdPercent
 	highLatency := bp.h.ValueAtPercentile(bp.cfg.DecreaseLatencyPercentile*100) > bp.cfg.DecreaseLatency.Nanoseconds()
 
 	moderateCongestion := congestedPercent > 0 && congestedPercent < bp.cfg.ThresholdPercent
@@ -205,7 +208,7 @@ func (bp *AIMD) incr(max int64) {
 
 func (bp *AIMD) decr(max int64) {
 	usedMax := atomic.LoadInt64(&bp.usedMax)
-	if max > usedMax {
+	if usedMax != 0 && max > usedMax {
 		max = usedMax
 	}
 

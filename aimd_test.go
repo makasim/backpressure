@@ -1,6 +1,7 @@
 package backpressure
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -185,15 +186,250 @@ func TestNew(main *testing.T) {
 		require.Nil(t, bp)
 	})
 
+	main.Run("MinMaxDefault", func(t *testing.T) {
+		bp, err := NewAIMD(AIMDConfig{
+			DecideInterval:   time.Second,
+			DecreasePercent:  0.04,
+			IncreasePercent:  0.02,
+			ThresholdPercent: 0.01,
+
+			MinMax: 0,
+		})
+		require.NoError(t, err)
+		require.Equal(t, int64(1), bp.cfg.MinMax)
+	})
+
+	main.Run("MaxMaxDefault", func(t *testing.T) {
+		bp, err := NewAIMD(AIMDConfig{
+			DecideInterval:   time.Second,
+			DecreasePercent:  0.04,
+			IncreasePercent:  0.02,
+			ThresholdPercent: 0.01,
+
+			MaxMax: 0,
+		})
+		require.NoError(t, err)
+		require.Equal(t, int64(math.MaxInt64), bp.cfg.MaxMax)
+	})
 }
 
-//func TestDecide(t *testing.T) {
-//	bp, err := NewAIMD(AIMDConfig{
-//		DecideInterval:   time.Millisecond * 5,
-//		ThresholdPercent: 0.01,
-//		IncreasePercent:  1.01,
-//		DecreasePercent:  0.8,
-//	})
-//	require.NoError(t, err)
-//
-//}
+func TestDecide(main *testing.T) {
+	setUp := func(t *testing.T) *AIMD {
+		bp, err := NewAIMD(AIMDConfig{
+			DecideInterval:   time.Second,
+			DecreasePercent:  0.20,
+			IncreasePercent:  0.10,
+			ThresholdPercent: 0.10,
+
+			MinMax: 1,
+			MaxMax: 100,
+		})
+		require.NoError(t, err)
+
+		return bp
+	}
+
+	main.Run("NoTraffic", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.cfg.IncreasePercent = 0.0001
+		bp.max = 80
+
+		bp.successful = 0
+		bp.congested = 0
+
+		bp.decide()
+		require.Equal(t, int64(80), bp.max)
+	})
+
+	main.Run("IncreaseSmall", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.cfg.IncreasePercent = 0.0001
+		bp.max = 80
+
+		bp.successful = 100
+		bp.decide()
+		require.Equal(t, int64(81), bp.max)
+
+		bp.successful = 200
+		bp.decide()
+		require.Equal(t, int64(82), bp.max)
+	})
+
+	main.Run("IncreaseNormal", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.max = 80
+
+		bp.successful = 100
+		bp.decide()
+		require.Equal(t, int64(89), bp.max)
+
+		bp.successful = 100
+		bp.decide()
+		require.Equal(t, int64(98), bp.max)
+
+		bp.successful = 100
+		bp.decide()
+		require.Equal(t, int64(100), bp.max)
+	})
+
+	main.Run("ModerateCongestion", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.max = 80
+
+		bp.successful = 1000
+		bp.congested = 99
+		bp.decide()
+		require.Equal(t, int64(80), bp.max)
+
+		bp.successful = 2000
+		bp.congested = 199
+		bp.decide()
+		require.Equal(t, int64(80), bp.max)
+	})
+
+	main.Run("HighCongestion", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.max = 80
+
+		bp.successful = 1000
+		bp.congested = 115
+		bp.decide()
+		require.Equal(t, int64(64), bp.max)
+
+		bp.successful = 2000
+		bp.congested = 225
+		bp.decide()
+		require.Equal(t, int64(52), bp.max)
+	})
+
+	main.Run("HighCongestionTooBigMaxNoUsedMax", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.max = 10000000000
+
+		bp.successful = 1000
+		bp.congested = 115
+		bp.decide()
+		require.Equal(t, int64(8000000000), bp.max)
+	})
+
+	main.Run("HighCongestionTooBigMaxWithUsedMax", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.max = 10000000000
+		bp.usedMax = 1000
+
+		bp.successful = 1000
+		bp.congested = 115
+		bp.decide()
+		require.Equal(t, int64(800), bp.max)
+	})
+
+	main.Run("HighCongestionMinMax", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.cfg.DecreasePercent = 0.99
+		bp.cfg.ThresholdPercent = 0
+
+		bp.max = 100
+
+		bp.successful = 10
+		bp.congested = 1
+		bp.decide()
+		require.Equal(t, int64(2), bp.max)
+
+		bp.successful = 10
+		bp.congested = 1
+		bp.decide()
+		require.Equal(t, int64(1), bp.max)
+
+		bp.successful = 10
+		bp.congested = 1
+		bp.decide()
+		require.Equal(t, int64(1), bp.max)
+	})
+
+	main.Run("NoLatency", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.cfg.SameLatencyPercentile = 0.5
+		bp.cfg.SameLatency = time.Second
+		bp.cfg.DecreaseLatencyPercentile = 0.5
+		bp.cfg.DecreaseLatency = time.Second * 2
+
+		bp.max = 80
+
+		require.NoError(t, bp.h.RecordValue((time.Millisecond * 900).Nanoseconds()))
+		require.NoError(t, bp.h.RecordValue((time.Millisecond * 900).Nanoseconds()))
+		require.NoError(t, bp.h.RecordValue((time.Millisecond * 1100).Nanoseconds()))
+
+		bp.successful = 100
+		bp.decide()
+		require.Equal(t, int64(89), bp.max)
+	})
+
+	main.Run("ModerateLatency", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.cfg.SameLatencyPercentile = 0.5
+		bp.cfg.SameLatency = time.Second
+		bp.cfg.DecreaseLatencyPercentile = 0.5
+		bp.cfg.DecreaseLatency = time.Second * 2
+
+		bp.max = 80
+
+		require.NoError(t, bp.h.RecordValue((time.Millisecond * 900).Nanoseconds()))
+		require.NoError(t, bp.h.RecordValue((time.Millisecond * 1100).Nanoseconds()))
+		require.NoError(t, bp.h.RecordValue((time.Millisecond * 1100).Nanoseconds()))
+
+		bp.successful = 100
+		bp.decide()
+		require.Equal(t, int64(80), bp.max)
+	})
+
+	main.Run("HighLatency", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.cfg.SameLatencyPercentile = 0.5
+		bp.cfg.SameLatency = time.Second
+		bp.cfg.DecreaseLatencyPercentile = 0.5
+		bp.cfg.DecreaseLatency = time.Second * 2
+
+		bp.max = 80
+
+		require.NoError(t, bp.h.RecordValue((time.Millisecond * 1900).Nanoseconds()))
+		require.NoError(t, bp.h.RecordValue((time.Millisecond * 2100).Nanoseconds()))
+		require.NoError(t, bp.h.RecordValue((time.Millisecond * 2100).Nanoseconds()))
+
+		bp.successful = 100
+		bp.decide()
+		require.Equal(t, int64(64), bp.max)
+	})
+
+	main.Run("IncrSameDecr", func(t *testing.T) {
+		bp := setUp(t)
+
+		bp.max = 80
+
+		bp.successful = 1000
+		bp.congested = 0
+		bp.decide()
+		require.Equal(t, int64(89), bp.max)
+
+		bp.successful = 1000
+		bp.congested = 100
+		bp.decide()
+		require.Equal(t, int64(89), bp.max)
+
+		bp.successful = 1000
+		bp.congested = 300
+		bp.decide()
+		require.Equal(t, int64(72), bp.max)
+	})
+
+}
