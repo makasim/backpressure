@@ -215,7 +215,6 @@ func (bp *AIMD) decide() {
 
 func (bp *AIMD) incr(max int64) {
 	newMax := int64(math.Floor(float64(max)*(1+bp.cfg.IncreasePercent)) + 1)
-	log.Println(newMax)
 	if newMax < 0 {
 		newMax = math.MaxInt64
 	}

@@ -2,7 +2,6 @@ package backpressure_test
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"sync/atomic"
 	"testing"
@@ -342,7 +341,6 @@ func (c *client) worker(closeCh chan struct{}) {
 				case c.outCh <- req:
 					if err := <-req.resCh; err != nil {
 						atomic.AddInt64(&c.failed, 1)
-						log.Println(err)
 					} else {
 						atomic.AddInt64(&c.ok, 1)
 					}
@@ -398,7 +396,6 @@ func (p *proxy) worker(closeCh chan struct{}) {
 			t, allowed := p.bp.Acquire()
 			if !allowed {
 				req.resCh <- fmt.Errorf("bp: disallowed")
-				log.Printf("%+v", p.bp.Stats())
 				continue
 			}
 
