@@ -66,7 +66,8 @@ type AIMD struct {
 	stats    AIMDStats
 	muxStats sync.RWMutex
 
-	h *hdrhistogram.Histogram
+	muxH sync.RWMutex
+	h    *hdrhistogram.Histogram
 }
 
 func NewAIMD(cfg AIMDConfig) (*AIMD, error) {
@@ -127,16 +128,21 @@ loop:
 func (bp *AIMD) Release(t Token) {
 	atomic.AddInt64(&bp.used, -1)
 
-	startT := time.Unix(0, t.start)
-	dur := time.Now().Sub(startT).Nanoseconds()
-	if err := bp.h.RecordValue(dur); err != nil {
-		log.Printf("[ERROR] backpressure: histogram: record value: %s", err)
-	}
-
 	if !t.Congested {
 		atomic.AddInt64(&bp.successful, 1)
 	} else {
 		atomic.AddInt64(&bp.congested, 1)
+	}
+
+	if bp.cfg.DecreaseLatencyPercentile > 0 || bp.cfg.SameLatencyPercentile > 0 {
+		startT := time.Unix(0, t.start)
+		dur := time.Now().Sub(startT).Nanoseconds()
+
+		bp.muxH.Lock()
+		defer bp.muxH.Unlock()
+		if err := bp.h.RecordValue(dur); err != nil {
+			log.Printf("[ERROR] backpressure: histogram: record value: %s", err)
+		}
 	}
 }
 
@@ -160,12 +166,18 @@ func (bp *AIMD) decide() {
 		return
 	}
 
+	highLatency := false
+	moderateLatency := false
+	if bp.cfg.DecreaseLatencyPercentile > 0 || bp.cfg.SameLatencyPercentile > 0 {
+		bp.muxH.Lock()
+		highLatency = bp.h.ValueAtPercentile(bp.cfg.DecreaseLatencyPercentile*100) > bp.cfg.DecreaseLatency.Nanoseconds()
+		moderateLatency = bp.cfg.SameLatency > 0 && bp.h.ValueAtPercentile(bp.cfg.SameLatencyPercentile*100) > bp.cfg.SameLatency.Nanoseconds()
+		bp.muxH.Unlock()
+	}
+
 	congestedPercent := float64(congested) / float64(successful+congested)
 	highCongestion := congestedPercent != 0 && congestedPercent >= bp.cfg.ThresholdPercent
-	highLatency := bp.h.ValueAtPercentile(bp.cfg.DecreaseLatencyPercentile*100) > bp.cfg.DecreaseLatency.Nanoseconds()
-
 	moderateCongestion := congestedPercent > 0 && congestedPercent < bp.cfg.ThresholdPercent
-	moderateLatency := bp.cfg.SameLatency > 0 && bp.h.ValueAtPercentile(bp.cfg.SameLatencyPercentile*100) > bp.cfg.SameLatency.Nanoseconds()
 
 	var incr, decr, same int64
 	switch {
@@ -194,7 +206,11 @@ func (bp *AIMD) decide() {
 	}
 	bp.muxStats.Unlock()
 
-	bp.h.Reset()
+	if bp.cfg.DecreaseLatencyPercentile > 0 || bp.cfg.SameLatencyPercentile > 0 {
+		bp.muxH.Lock()
+		bp.h.Reset()
+		bp.muxH.Unlock()
+	}
 }
 
 func (bp *AIMD) incr(max int64) {
