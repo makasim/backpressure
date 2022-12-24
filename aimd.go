@@ -74,6 +74,13 @@ func NewAIMD(cfg AIMDConfig) (*AIMD, error) {
 		return nil, err
 	}
 
+	if cfg.MinMax == 0 {
+		cfg.MinMax = 1
+	}
+	if cfg.MaxMax == 0 {
+		cfg.MaxMax = math.MaxInt
+	}
+
 	bp := &AIMD{
 		cfg: cfg,
 		dt:  time.NewTicker(cfg.DecideInterval),
@@ -217,15 +224,11 @@ type Token struct {
 func validateAIMDConfig(cfg AIMDConfig) error {
 	if cfg.DecideInterval == 0 {
 		return fmt.Errorf("DecideInterval: required")
+	} else if cfg.DecideInterval < 0 {
+		return fmt.Errorf("DecideInterval: negative")
 	}
 
-	if cfg.MinMax == 0 {
-		return fmt.Errorf("MinMax: required")
-	}
-	if cfg.MaxMax == 0 {
-		return fmt.Errorf("MaxMax: required")
-	}
-	if cfg.MinMax >= cfg.MaxMax {
+	if cfg.MinMax != 0 && cfg.MaxMax != 0 && cfg.MinMax >= cfg.MaxMax {
 		return fmt.Errorf("MinMax: must be less than MaxMax")
 	}
 
@@ -239,8 +242,12 @@ func validateAIMDConfig(cfg AIMDConfig) error {
 	if err := validatePercent(cfg.IncreasePercent); err != nil {
 		return fmt.Errorf("IncreasePercent: %s", err)
 	}
-	if cfg.DecreasePercent == 0 {
+	if cfg.IncreasePercent == 0 {
 		return fmt.Errorf("IncreasePercent: required")
+	}
+
+	if cfg.DecreasePercent <= cfg.IncreasePercent {
+		return fmt.Errorf("IncreasePercent: must be less than DecreasePercent")
 	}
 
 	if err := validatePercent(cfg.ThresholdPercent); err != nil {
@@ -256,6 +263,9 @@ func validateAIMDConfig(cfg AIMDConfig) error {
 
 	if err := validatePercent(cfg.SameLatencyPercentile); err != nil {
 		return fmt.Errorf("SameLatencyPercentile: %s", err)
+	}
+	if cfg.SameLatencyPercentile != 0 && cfg.SameLatency == 0 {
+		return fmt.Errorf("SameLatency: required")
 	}
 	if cfg.SameLatencyPercentile != 0 && cfg.SameLatency == 0 {
 		return fmt.Errorf("SameLatency: required")
