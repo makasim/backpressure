@@ -15,9 +15,13 @@ type req struct {
 	resCh chan error
 }
 
+var tMul = time.Duration(10)
+
 func TestNoCongestion(t *testing.T) {
+	t.Parallel()
+
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:  time.Millisecond,
+		DecideInterval:  time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
 	})
@@ -26,7 +30,7 @@ func TestNoCongestion(t *testing.T) {
 	c := newClient(10)
 	p := newProxy(c.outCh, 50, bp)
 	o := newOrigin(func(idx, used int64, req req) {
-		time.Sleep(time.Microsecond * 900)
+		time.Sleep(time.Microsecond * 900 * tMul)
 		req.resCh <- nil
 	}, 10, p.outCh)
 
@@ -34,15 +38,15 @@ func TestNoCongestion(t *testing.T) {
 	defer p.run()()
 	defer c.run()()
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * tMul)
 
 	ok, failed := c.stats()
 	int64InRange(t, 0, 0, failed)
 	int64InRange(t, 9500, 10000, ok)
 
 	s := bp.Stats()
-	int64InRange(t, 8, 12, s.Used)
-	int64InRange(t, 8, math.MaxInt64, s.Max)
+	int64InRange(t, 4, 12, s.Used)
+	int64InRange(t, 4, math.MaxInt64, s.Max)
 	int64InRange(t, 0, 0, s.DeniedCounter)
 	int64InRange(t, 0, 0, s.CongestedCounter)
 	int64InRange(t, 9500, 10000, s.SuccessfulCounter)
@@ -50,8 +54,10 @@ func TestNoCongestion(t *testing.T) {
 }
 
 func TestNoCongestionSlowHandlers(t *testing.T) {
+	t.Parallel()
+
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:  time.Millisecond,
+		DecideInterval:  time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
 	})
@@ -60,7 +66,7 @@ func TestNoCongestionSlowHandlers(t *testing.T) {
 	c := newClient(10)
 	p := newProxy(c.outCh, 50, bp)
 	o := newOrigin(func(idx, used int64, req req) {
-		time.Sleep(time.Microsecond * 1900)
+		time.Sleep(time.Microsecond * 1900 * tMul)
 		req.resCh <- nil
 	}, 20, p.outCh)
 
@@ -68,7 +74,7 @@ func TestNoCongestionSlowHandlers(t *testing.T) {
 	defer p.run()()
 	defer c.run()()
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * tMul)
 
 	ok, failed := c.stats()
 	int64InRange(t, 0, 0, failed)
@@ -83,8 +89,10 @@ func TestNoCongestionSlowHandlers(t *testing.T) {
 }
 
 func TestNoCongestionFewHandlers(t *testing.T) {
+	t.Parallel()
+
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:  time.Millisecond,
+		DecideInterval:  time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
 	})
@@ -93,7 +101,7 @@ func TestNoCongestionFewHandlers(t *testing.T) {
 	c := newClient(10)
 	p := newProxy(c.outCh, 50, bp)
 	o := newOrigin(func(idx, used int64, req req) {
-		time.Sleep(time.Microsecond * 400)
+		time.Sleep(time.Microsecond * 400 * tMul)
 		req.resCh <- nil
 	}, 5, p.outCh)
 
@@ -101,7 +109,7 @@ func TestNoCongestionFewHandlers(t *testing.T) {
 	defer p.run()()
 	defer c.run()()
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * tMul)
 
 	ok, failed := c.stats()
 	int64InRange(t, 0, 0, failed)
@@ -116,8 +124,10 @@ func TestNoCongestionFewHandlers(t *testing.T) {
 }
 
 func TestCongestion20Percent(t *testing.T) {
+	t.Parallel()
+
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:  time.Millisecond,
+		DecideInterval:  time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
 	})
@@ -126,7 +136,7 @@ func TestCongestion20Percent(t *testing.T) {
 	c := newClient(10)
 	p := newProxy(c.outCh, 50, bp)
 	o := newOrigin(func(idx, used int64, req req) {
-		time.Sleep(time.Microsecond * 1200)
+		time.Sleep(time.Microsecond * 1200 * tMul)
 		req.resCh <- nil
 	}, 10, p.outCh)
 
@@ -134,11 +144,11 @@ func TestCongestion20Percent(t *testing.T) {
 	defer p.run()()
 	defer c.run()()
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * tMul)
 
 	ok, failed := c.stats()
-	int64InRange(t, 1000, 2000, failed)
-	int64InRange(t, 8000, 8500, ok)
+	int64InRange(t, 500, 2500, failed)
+	int64InRange(t, 7500, 9000, ok)
 
 	s := bp.Stats()
 	int64InRange(t, 20, 50, s.Used)
@@ -146,14 +156,16 @@ func TestCongestion20Percent(t *testing.T) {
 
 	int64InRange(t, 1, math.MaxInt64, s.CongestedCounter)
 	int64InRange(t, 1, math.MaxInt64, s.DeniedCounter)
-	int64InRange(t, 1000, 3000, s.DeniedCounter+s.CongestedCounter)
+	int64InRange(t, 500, 2500, s.DeniedCounter+s.CongestedCounter)
 
-	int64InRange(t, 7500, 8500, s.SuccessfulCounter)
+	int64InRange(t, 7500, 9000, s.SuccessfulCounter)
 }
 
 func TestCongestion50Percent(t *testing.T) {
+	t.Parallel()
+
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:  time.Millisecond,
+		DecideInterval:  time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
 	})
@@ -162,7 +174,7 @@ func TestCongestion50Percent(t *testing.T) {
 	c := newClient(10)
 	p := newProxy(c.outCh, 50, bp)
 	o := newOrigin(func(idx, used int64, req req) {
-		time.Sleep(time.Microsecond * 2000)
+		time.Sleep(time.Microsecond * 2000 * tMul)
 		req.resCh <- nil
 	}, 10, p.outCh)
 
@@ -170,7 +182,7 @@ func TestCongestion50Percent(t *testing.T) {
 	defer p.run()()
 	defer c.run()()
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * tMul)
 
 	ok, failed := c.stats()
 	int64InRange(t, 4000, 6000, failed)
@@ -188,8 +200,10 @@ func TestCongestion50Percent(t *testing.T) {
 }
 
 func TestCongestion50PercentAndRecover(t *testing.T) {
+	t.Parallel()
+
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:  time.Millisecond,
+		DecideInterval:  time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
 	})
@@ -199,9 +213,9 @@ func TestCongestion50PercentAndRecover(t *testing.T) {
 	p := newProxy(c.outCh, 50, bp)
 	o := newOrigin(func(idx, used int64, req req) {
 		if idx < 2000 {
-			time.Sleep(time.Microsecond * 1900)
+			time.Sleep(time.Microsecond * 1900 * tMul)
 		} else {
-			time.Sleep(time.Microsecond * 950)
+			time.Sleep(time.Microsecond * 950 * tMul)
 		}
 		req.resCh <- nil
 	}, 10, p.outCh)
@@ -210,7 +224,7 @@ func TestCongestion50PercentAndRecover(t *testing.T) {
 	defer p.run()()
 	defer c.run()()
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * tMul)
 
 	ok, failed := c.stats()
 	int64InRange(t, 1000, 2000, failed)
@@ -228,12 +242,14 @@ func TestCongestion50PercentAndRecover(t *testing.T) {
 }
 
 func TestDecreaseLatency(t *testing.T) {
+	t.Parallel()
+
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:            time.Millisecond,
+		DecideInterval:            time.Millisecond * tMul,
 		IncreasePercent:           0.02,
 		DecreasePercent:           0.2,
 		DecreaseLatencyPercentile: 0.8,
-		DecreaseLatency:           time.Microsecond * 1500,
+		DecreaseLatency:           time.Microsecond * 1500 * tMul,
 	})
 	require.NoError(t, err)
 
@@ -241,15 +257,15 @@ func TestDecreaseLatency(t *testing.T) {
 	p := newProxy(c.outCh, 1000, bp)
 	o := newOrigin(func(idx, used int64, req req) {
 		if used > 25 {
-			time.Sleep(time.Microsecond * 2500)
+			time.Sleep(time.Microsecond * 2500 * tMul)
 		} else if used > 20 {
-			time.Sleep(time.Microsecond * 2000)
+			time.Sleep(time.Microsecond * 2000 * tMul)
 		} else if used > 15 {
-			time.Sleep(time.Microsecond * 1750)
+			time.Sleep(time.Microsecond * 1750 * tMul)
 		} else if used > 12 {
-			time.Sleep(time.Microsecond * 1500)
+			time.Sleep(time.Microsecond * 1500 * tMul)
 		} else {
-			time.Sleep(time.Microsecond * 950)
+			time.Sleep(time.Microsecond * 950 * tMul)
 		}
 		req.resCh <- nil
 	}, 1000, p.outCh)
@@ -258,16 +274,16 @@ func TestDecreaseLatency(t *testing.T) {
 	defer p.run()()
 	defer c.run()()
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Second * tMul)
 
 	ok, failed := c.stats()
-	int64InRange(t, 18000, 20000, failed)
+	int64InRange(t, 18000, 23000, failed)
 	int64InRange(t, 9000, 11000, ok)
 
 	s := bp.Stats()
 	int64InRange(t, 0, math.MaxInt64, s.CongestedCounter)
 	int64InRange(t, 1, math.MaxInt64, s.DeniedCounter)
-	int64InRange(t, 18000, 20000, s.DeniedCounter+s.CongestedCounter)
+	int64InRange(t, 18000, 23000, s.DeniedCounter+s.CongestedCounter)
 
 	int64InRange(t, 9000, 11000, s.SuccessfulCounter)
 }
@@ -303,7 +319,7 @@ func (c *client) worker(closeCh chan struct{}) {
 	internalRPS := int(math.Ceil(float64(c.rpms / 10)))
 	tokensCh := make(chan struct{}, internalRPS)
 
-	t := time.NewTicker(time.Microsecond * 100)
+	t := time.NewTicker(time.Microsecond * 100 * tMul)
 	defer t.Stop()
 
 	for {
