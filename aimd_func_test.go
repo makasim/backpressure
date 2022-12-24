@@ -398,6 +398,7 @@ func (p *proxy) worker(closeCh chan struct{}) {
 			t, allowed := p.bp.Acquire()
 			if !allowed {
 				req.resCh <- fmt.Errorf("bp: disallowed")
+				log.Printf("%+v", p.bp.Stats())
 				continue
 			}
 
