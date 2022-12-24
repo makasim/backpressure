@@ -16,7 +16,7 @@ type req struct {
 	resCh chan error
 }
 
-var tMul = time.Duration(30)
+var tMul = time.Duration(2)
 
 func TestNoCongestion(t *testing.T) {
 	t.Parallel()
