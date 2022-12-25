@@ -31,8 +31,11 @@ type AIMDConfig struct {
 	// MInMax defines a minimum possible capacity. Default 1
 	MinMax int64
 
-	SameLatency               time.Duration
-	SameLatencyPercentile     float64
+	// SameLatency The capacity is kept the same if latency goes above the value at given percentile
+	SameLatency           time.Duration
+	SameLatencyPercentile float64
+
+	// DecreaseLatency The capacity is decreased if latency goes above the value at given percentile
 	DecreaseLatency           time.Duration
 	DecreaseLatencyPercentile float64
 }
