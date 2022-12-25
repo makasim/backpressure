@@ -12,13 +12,23 @@ import (
 )
 
 type AIMDConfig struct {
-	DecideInterval time.Duration
+	// DecidePeriod defines periods when the decision on capacity is made: increase, keep same, decrease
+	DecidePeriod time.Duration
 
+	// ThresholdPercent defines a congestion threshold (tp).
+	// If congestion below threshold the capacity is kept the same.
+	// If congestion above threshold the capacity is decreased.
 	ThresholdPercent float64
-	IncreasePercent  float64
-	DecreasePercent  float64
 
+	// IncreasePercent defines an increase percent of current capacity.
+	IncreasePercent float64
+
+	// DecreasePercent defines an decrease percent of current capacity.
+	DecreasePercent float64
+
+	// MaxMax defines a maximum possible capacity. Default math.MaxInt64
 	MaxMax int64
+	// MInMax defines a minimum possible capacity. Default 1
 	MinMax int64
 
 	SameLatency               time.Duration
@@ -43,7 +53,7 @@ type AIMDStats struct {
 
 func DefaultAIMDConfig() AIMDConfig {
 	return AIMDConfig{
-		DecideInterval:   time.Second * 5,
+		DecidePeriod:     time.Second * 5,
 		ThresholdPercent: 0.01,
 		IncreasePercent:  0.02,
 		DecreasePercent:  0.2,
@@ -84,7 +94,7 @@ func NewAIMD(cfg AIMDConfig) (*AIMD, error) {
 
 	bp := &AIMD{
 		cfg: cfg,
-		dt:  time.NewTicker(cfg.DecideInterval),
+		dt:  time.NewTicker(cfg.DecidePeriod),
 
 		max: cfg.MaxMax,
 
@@ -244,10 +254,10 @@ type Token struct {
 }
 
 func validateAIMDConfig(cfg AIMDConfig) error {
-	if cfg.DecideInterval == 0 {
-		return fmt.Errorf("DecideInterval: required")
-	} else if cfg.DecideInterval < 0 {
-		return fmt.Errorf("DecideInterval: negative")
+	if cfg.DecidePeriod == 0 {
+		return fmt.Errorf("DecidePeriod: required")
+	} else if cfg.DecidePeriod < 0 {
+		return fmt.Errorf("DecidePeriod: negative")
 	}
 
 	if cfg.MinMax != 0 && cfg.MaxMax != 0 && cfg.MinMax >= cfg.MaxMax {

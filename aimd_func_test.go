@@ -15,13 +15,13 @@ type req struct {
 	resCh chan error
 }
 
-var tMul = time.Duration(30)
+var tMul = time.Duration(15)
 
 func TestNoCongestion(t *testing.T) {
 	t.Parallel()
 
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:  time.Millisecond * tMul,
+		DecidePeriod:    time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
 	})
@@ -57,7 +57,7 @@ func TestNoCongestionSlowHandlers(t *testing.T) {
 	t.Parallel()
 
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:  time.Millisecond * tMul,
+		DecidePeriod:    time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
 	})
@@ -92,7 +92,7 @@ func TestNoCongestionFewHandlers(t *testing.T) {
 	t.Parallel()
 
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:  time.Millisecond * tMul,
+		DecidePeriod:    time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
 	})
@@ -127,7 +127,7 @@ func TestCongestion20Percent(t *testing.T) {
 	t.Parallel()
 
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:  time.Millisecond * tMul,
+		DecidePeriod:    time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
 	})
@@ -165,7 +165,7 @@ func TestCongestion50Percent(t *testing.T) {
 	t.Parallel()
 
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:  time.Millisecond * tMul,
+		DecidePeriod:    time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
 	})
@@ -203,7 +203,7 @@ func TestCongestion50PercentAndRecover(t *testing.T) {
 	t.Parallel()
 
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:  time.Millisecond * tMul,
+		DecidePeriod:    time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
 	})
@@ -245,7 +245,7 @@ func TestDecreaseLatency(t *testing.T) {
 	t.Parallel()
 
 	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
-		DecideInterval:            time.Millisecond * tMul,
+		DecidePeriod:              time.Millisecond * tMul,
 		IncreasePercent:           0.02,
 		DecreasePercent:           0.2,
 		DecreaseLatencyPercentile: 0.8,
