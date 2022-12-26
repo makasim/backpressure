@@ -62,3 +62,10 @@ BenchmarkAIMD_Congested-10    	18400120	        65.22 ns/op	       0 B/op	      
 PASS
 ok  	github.com/makasim/backpressure	2.758s
 ```
+
+## References 
+
+* https://www.youtube.com/watch?v=m64SWl9bfvk
+* https://en.wikipedia.org/wiki/TCP_congestion_control
+* https://www.youtube.com/watch?v=UdT0xVacEUg
+* https://github.com/marselester/capacity
