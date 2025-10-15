@@ -1,6 +1,6 @@
 module github.com/makasim/backpressure
 
-go 1.19
+go 1.25.2
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2
