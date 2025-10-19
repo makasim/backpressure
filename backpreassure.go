@@ -106,7 +106,7 @@ func New(cfg Config) (*Backpreassure, error) {
 		cfg: cfg,
 		dt:  time.NewTicker(cfg.DecidePeriod),
 
-		max: cfg.MaxMax,
+		max: cfg.Max,
 
 		h: hdrhistogram.NewWindowed(3, 0, (time.Minute * 10).Nanoseconds(), 1),
 	}
