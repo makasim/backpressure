@@ -386,9 +386,11 @@ func TestDecide(main *testing.T) {
 
 		bp.max = 80
 
-		require.NoError(t, bp.h.RecordValue((time.Millisecond * 900).Nanoseconds()))
-		require.NoError(t, bp.h.RecordValue((time.Millisecond * 900).Nanoseconds()))
-		require.NoError(t, bp.h.RecordValue((time.Millisecond * 1100).Nanoseconds()))
+		h := bp.h.Merge()
+
+		require.NoError(t, h.RecordValue((time.Millisecond * 900).Nanoseconds()))
+		require.NoError(t, h.RecordValue((time.Millisecond * 900).Nanoseconds()))
+		require.NoError(t, h.RecordValue((time.Millisecond * 1100).Nanoseconds()))
 
 		bp.successful = 100
 		bp.decide()
@@ -405,9 +407,11 @@ func TestDecide(main *testing.T) {
 
 		bp.max = 80
 
-		require.NoError(t, bp.h.RecordValue((time.Millisecond * 900).Nanoseconds()))
-		require.NoError(t, bp.h.RecordValue((time.Millisecond * 1100).Nanoseconds()))
-		require.NoError(t, bp.h.RecordValue((time.Millisecond * 1100).Nanoseconds()))
+		h := bp.h.Merge()
+
+		require.NoError(t, h.RecordValue((time.Millisecond * 900).Nanoseconds()))
+		require.NoError(t, h.RecordValue((time.Millisecond * 1100).Nanoseconds()))
+		require.NoError(t, h.RecordValue((time.Millisecond * 1100).Nanoseconds()))
 
 		bp.successful = 100
 		bp.decide()
@@ -424,9 +428,11 @@ func TestDecide(main *testing.T) {
 
 		bp.max = 80
 
-		require.NoError(t, bp.h.RecordValue((time.Millisecond * 1900).Nanoseconds()))
-		require.NoError(t, bp.h.RecordValue((time.Millisecond * 2100).Nanoseconds()))
-		require.NoError(t, bp.h.RecordValue((time.Millisecond * 2100).Nanoseconds()))
+		h := bp.h.Merge()
+
+		require.NoError(t, h.RecordValue((time.Millisecond * 1900).Nanoseconds()))
+		require.NoError(t, h.RecordValue((time.Millisecond * 2100).Nanoseconds()))
+		require.NoError(t, h.RecordValue((time.Millisecond * 2100).Nanoseconds()))
 
 		bp.successful = 100
 		bp.decide()
