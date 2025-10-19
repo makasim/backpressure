@@ -252,11 +252,14 @@ func (bp *AIMD) decr(max int64) {
 		max = usedMax
 	}
 
-	max = int64(math.Ceil(float64(max) * (1 - bp.cfg.DecreasePercent)))
-	if max < bp.cfg.MinMax {
-		max = bp.cfg.MinMax
+	newMax := int64(math.Ceil(float64(max) * (1 - bp.cfg.DecreasePercent)))
+	if newMax == max {
+		newMax--
 	}
-	atomic.StoreInt64(&bp.max, max)
+	if newMax < bp.cfg.MinMax {
+		newMax = bp.cfg.MinMax
+	}
+	atomic.StoreInt64(&bp.max, newMax)
 }
 
 type Token struct {
