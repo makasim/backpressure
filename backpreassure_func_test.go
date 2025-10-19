@@ -20,7 +20,7 @@ var tMul = time.Duration(15)
 func TestNoCongestion(t *testing.T) {
 	t.Parallel()
 
-	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
+	bp, err := backpressure.New(backpressure.Config{
 		DecidePeriod:    time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
@@ -56,7 +56,7 @@ func TestNoCongestion(t *testing.T) {
 func TestNoCongestionSlowHandlers(t *testing.T) {
 	t.Parallel()
 
-	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
+	bp, err := backpressure.New(backpressure.Config{
 		DecidePeriod:    time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
@@ -91,7 +91,7 @@ func TestNoCongestionSlowHandlers(t *testing.T) {
 func TestNoCongestionFewHandlers(t *testing.T) {
 	t.Parallel()
 
-	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
+	bp, err := backpressure.New(backpressure.Config{
 		DecidePeriod:    time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
@@ -126,7 +126,7 @@ func TestNoCongestionFewHandlers(t *testing.T) {
 func TestCongestion20Percent(t *testing.T) {
 	t.Parallel()
 
-	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
+	bp, err := backpressure.New(backpressure.Config{
 		DecidePeriod:    time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
@@ -164,7 +164,7 @@ func TestCongestion20Percent(t *testing.T) {
 func TestCongestion50Percent(t *testing.T) {
 	t.Parallel()
 
-	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
+	bp, err := backpressure.New(backpressure.Config{
 		DecidePeriod:    time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
@@ -202,7 +202,7 @@ func TestCongestion50Percent(t *testing.T) {
 func TestCongestion50PercentAndRecover(t *testing.T) {
 	t.Parallel()
 
-	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
+	bp, err := backpressure.New(backpressure.Config{
 		DecidePeriod:    time.Millisecond * tMul,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,
@@ -244,7 +244,7 @@ func TestCongestion50PercentAndRecover(t *testing.T) {
 func TestDecreaseLatency(t *testing.T) {
 	t.Parallel()
 
-	bp, err := backpressure.NewAIMD(backpressure.AIMDConfig{
+	bp, err := backpressure.New(backpressure.Config{
 		DecidePeriod:              time.Millisecond * tMul,
 		IncreasePercent:           0.02,
 		DecreasePercent:           0.2,
@@ -364,11 +364,11 @@ func (c *client) stats() (int64, int64) {
 type proxy struct {
 	inCh  chan req
 	outCh chan req
-	bp    *backpressure.AIMD
+	bp    *backpressure.Backpreassure
 	wNum  int
 }
 
-func newProxy(inCh chan req, wNum int, bp *backpressure.AIMD) *proxy {
+func newProxy(inCh chan req, wNum int, bp *backpressure.Backpreassure) *proxy {
 	return &proxy{
 		inCh:  inCh,
 		outCh: make(chan req, 20),

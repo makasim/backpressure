@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	bp, _ := backpressure.NewAIMD(backpressure.AIMDConfig{
+	bp, _ := backpressure.New(backpressure.Config{
 		DecidePeriod:    time.Second,
 		IncreasePercent: 0.02,
 		DecreasePercent: 0.2,

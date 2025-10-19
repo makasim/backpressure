@@ -10,7 +10,7 @@ import (
 
 func TestNew(main *testing.T) {
 	main.Run("DecideIntervalZero", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod: 0,
 		})
 		require.EqualError(t, err, `DecidePeriod: required`)
@@ -18,7 +18,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("DecideIntervalNegative", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod: -1,
 		})
 		require.EqualError(t, err, `DecidePeriod: negative`)
@@ -26,7 +26,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("DecreasePercentZero", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:    time.Second,
 			DecreasePercent: 0,
 		})
@@ -35,7 +35,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("DecreasePercentLessThanZero", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:    time.Second,
 			DecreasePercent: -0.01,
 		})
@@ -44,7 +44,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("DecreasePercentMoreThanOne", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:    time.Second,
 			DecreasePercent: 1.01,
 		})
@@ -53,7 +53,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("IncreasePercentZero", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:    time.Second,
 			DecreasePercent: 0.02,
 			IncreasePercent: 0,
@@ -63,7 +63,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("IncreasePercentLessThanZero", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:    time.Second,
 			DecreasePercent: 0.02,
 			IncreasePercent: -0.01,
@@ -73,7 +73,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("IncreasePercentMoreThanOne", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:    time.Second,
 			DecreasePercent: 0.02,
 			IncreasePercent: 1.01,
@@ -83,7 +83,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("IncreasePercentLessThanDecreasePercent", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:    time.Second,
 			DecreasePercent: 0.02,
 			IncreasePercent: 0.02,
@@ -93,7 +93,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("ThresholdPercentLessThanZero", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:     time.Second,
 			DecreasePercent:  0.04,
 			IncreasePercent:  0.02,
@@ -104,7 +104,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("ThresholdPercentMoreThanOne", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:     time.Second,
 			DecreasePercent:  0.04,
 			IncreasePercent:  0.02,
@@ -115,7 +115,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("DecreaseLatencyPercentileLessThanZero", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:              time.Second,
 			DecreasePercent:           0.04,
 			IncreasePercent:           0.02,
@@ -127,7 +127,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("DecreaseLatencyPercentileMoreThanOne", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:              time.Second,
 			DecreasePercent:           0.04,
 			IncreasePercent:           0.02,
@@ -139,7 +139,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("DecreaseLatencyZero", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:              time.Second,
 			DecreasePercent:           0.04,
 			IncreasePercent:           0.02,
@@ -151,7 +151,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("SameLatencyPercentileLessThanZero", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:          time.Second,
 			DecreasePercent:       0.04,
 			IncreasePercent:       0.02,
@@ -163,7 +163,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("SameLatencyPercentileMoreThanOne", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:          time.Second,
 			DecreasePercent:       0.04,
 			IncreasePercent:       0.02,
@@ -175,7 +175,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("SameLatencyZero", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:          time.Second,
 			DecreasePercent:       0.04,
 			IncreasePercent:       0.02,
@@ -187,7 +187,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("MinMaxDefault", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:     time.Second,
 			DecreasePercent:  0.04,
 			IncreasePercent:  0.02,
@@ -200,7 +200,7 @@ func TestNew(main *testing.T) {
 	})
 
 	main.Run("MaxMaxDefault", func(t *testing.T) {
-		bp, err := NewAIMD(AIMDConfig{
+		bp, err := New(Config{
 			DecidePeriod:     time.Second,
 			DecreasePercent:  0.04,
 			IncreasePercent:  0.02,
@@ -214,8 +214,8 @@ func TestNew(main *testing.T) {
 }
 
 func TestDecide(main *testing.T) {
-	setUp := func(t *testing.T) *AIMD {
-		bp, err := NewAIMD(AIMDConfig{
+	setUp := func(t *testing.T) *Backpreassure {
+		bp, err := New(Config{
 			DecidePeriod:     time.Second,
 			DecreasePercent:  0.20,
 			IncreasePercent:  0.10,

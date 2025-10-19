@@ -11,7 +11,7 @@ import (
 	"github.com/HdrHistogram/hdrhistogram-go"
 )
 
-type AIMDConfig struct {
+type Config struct {
 	// DecidePeriod defines periods when the decision on capacity is made: increase, keep same, decrease
 	DecidePeriod time.Duration
 
@@ -30,6 +30,9 @@ type AIMDConfig struct {
 	MaxMax int64
 	// MInMax defines a minimum possible capacity. Default 1
 	MinMax int64
+
+	// Max defines the initial maximum capacity. Default (MaxMax + MinMax) / 2
+	Max int64
 
 	// SameLatency The capacity is kept the same if latency goes above the value at given percentile
 	SameLatency           time.Duration
@@ -54,19 +57,20 @@ type AIMDStats struct {
 	DecideSameCounter     int64
 }
 
-func DefaultAIMDConfig() AIMDConfig {
-	return AIMDConfig{
+func DefaultAIMDConfig() Config {
+	return Config{
 		DecidePeriod:     time.Second * 5,
 		ThresholdPercent: 0.01,
 		IncreasePercent:  0.02,
 		DecreasePercent:  0.2,
 		MaxMax:           math.MaxInt,
+		Max:              math.MaxInt / 2,
 		MinMax:           1,
 	}
 }
 
-type AIMD struct {
-	cfg AIMDConfig
+type Backpreassure struct {
+	cfg Config
 	dt  *time.Ticker
 
 	max        int64
@@ -83,7 +87,7 @@ type AIMD struct {
 	hMux sync.Mutex
 }
 
-func NewAIMD(cfg AIMDConfig) (*AIMD, error) {
+func New(cfg Config) (*Backpreassure, error) {
 	if err := validateAIMDConfig(cfg); err != nil {
 		return nil, err
 	}
@@ -94,8 +98,11 @@ func NewAIMD(cfg AIMDConfig) (*AIMD, error) {
 	if cfg.MaxMax == 0 {
 		cfg.MaxMax = math.MaxInt64
 	}
+	if cfg.Max == 0 {
+		cfg.Max = (cfg.MaxMax + cfg.MinMax) / 2
+	}
 
-	bp := &AIMD{
+	bp := &Backpreassure{
 		cfg: cfg,
 		dt:  time.NewTicker(cfg.DecidePeriod),
 
@@ -119,7 +126,7 @@ func NewAIMD(cfg AIMDConfig) (*AIMD, error) {
 	return bp, nil
 }
 
-func (bp *AIMD) Acquire() (Token, bool) {
+func (bp *Backpreassure) Acquire() (Token, bool) {
 	select {
 	case <-bp.dt.C:
 		bp.decide()
@@ -150,7 +157,7 @@ loop:
 	}, true
 }
 
-func (bp *AIMD) Release(t Token) {
+func (bp *Backpreassure) Release(t Token) {
 	atomic.AddInt64(&bp.used, -1)
 
 	if !t.Congested {
@@ -171,7 +178,7 @@ func (bp *AIMD) Release(t Token) {
 	}
 }
 
-func (bp *AIMD) Stats() AIMDStats {
+func (bp *Backpreassure) Stats() AIMDStats {
 	bp.muxStats.RLock()
 	defer bp.muxStats.RUnlock()
 
@@ -181,7 +188,7 @@ func (bp *AIMD) Stats() AIMDStats {
 	return s
 }
 
-func (bp *AIMD) decide() {
+func (bp *Backpreassure) decide() {
 	successful := atomic.SwapInt64(&bp.successful, 0)
 	congested := atomic.SwapInt64(&bp.congested, 0)
 	denied := atomic.SwapInt64(&bp.denied, 0)
@@ -234,7 +241,7 @@ func (bp *AIMD) decide() {
 	bp.muxStats.Unlock()
 }
 
-func (bp *AIMD) incr(max int64) {
+func (bp *Backpreassure) incr(max int64) {
 	newMax := int64(math.Floor(float64(max)*(1+bp.cfg.IncreasePercent)) + 1)
 	if newMax < 0 {
 		newMax = math.MaxInt64
@@ -246,7 +253,7 @@ func (bp *AIMD) incr(max int64) {
 	atomic.StoreInt64(&bp.max, newMax)
 }
 
-func (bp *AIMD) decr(max int64) {
+func (bp *Backpreassure) decr(max int64) {
 	usedMax := atomic.LoadInt64(&bp.usedMax)
 	if usedMax != 0 && max > usedMax {
 		max = usedMax
@@ -267,7 +274,7 @@ type Token struct {
 	start     int64
 }
 
-func validateAIMDConfig(cfg AIMDConfig) error {
+func validateAIMDConfig(cfg Config) error {
 	if cfg.DecidePeriod == 0 {
 		return fmt.Errorf("DecidePeriod: required")
 	} else if cfg.DecidePeriod < 0 {
