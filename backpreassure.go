@@ -134,10 +134,14 @@ func (bp *Backpreassure) Acquire() (Token, bool) {
 	}
 
 	used := atomic.AddInt64(&bp.used, 1)
-	if used > atomic.LoadInt64(&bp.max) {
+	maxCap := atomic.LoadInt64(&bp.max)
+	if used > maxCap {
 		atomic.AddInt64(&bp.used, -1)
 		atomic.AddInt64(&bp.denied, 1)
-		return Token{}, false
+		return Token{
+			Max:  maxCap,
+			Used: used,
+		}, false
 	}
 
 loop:
@@ -153,7 +157,9 @@ loop:
 	}
 
 	return Token{
-		start: time.Now().UnixNano(),
+		Max:     maxCap,
+		Used:    used,
+		StartAt: time.Now().UnixNano(),
 	}, true
 }
 
@@ -167,13 +173,15 @@ func (bp *Backpreassure) Release(t Token) {
 	}
 
 	if bp.cfg.DecreaseLatencyPercentile > 0 || bp.cfg.SameLatencyPercentile > 0 {
-		startT := time.Unix(0, t.start)
+		startT := time.Unix(0, t.StartAt)
 		dur := time.Now().Sub(startT).Nanoseconds()
 
-		bp.hMux.Lock()
-		defer bp.hMux.Unlock()
-		if err := bp.h.Current.RecordValue(dur); err != nil {
-			log.Printf("[ERROR] backpressure: histogram: record value: %s", err)
+		if !t.Denied {
+			bp.hMux.Lock()
+			defer bp.hMux.Unlock()
+			if err := bp.h.Current.RecordValue(dur); err != nil {
+				log.Printf("[ERROR] backpressure: histogram: record value: %s", err)
+			}
 		}
 	}
 }
@@ -270,8 +278,15 @@ func (bp *Backpreassure) decr(max int64) {
 }
 
 type Token struct {
+	// Max is the maximum capacity at the time of token acquisition
+	Max int64
+	// Used is the used capacity at the time of token acquisition
+	Used int64
+	// StartAt is a time when the token was acquired in UnixNano format
+	StartAt int64
+
 	Congested bool
-	start     int64
+	Denied    bool
 }
 
 func validateAIMDConfig(cfg Config) error {
